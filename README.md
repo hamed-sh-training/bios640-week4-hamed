@@ -9,8 +9,8 @@ This repository contains the Hamed (A-series) solution for the BIOS 640 Week 4 e
 - `data/`: cleaned NHANES data and the diet example data used by the Week 3 report.
 - `figures/`: figures saved during Week 3 and Week 4.
 - `outputs/week3-original/`: the original Week 3 PDF report.
-- `outputs/week3-html/`: the updated interactive HTML report.
-- `outputs/dashboard/`: the rendered NHANES dashboard.
+- `outputs/week3-html/`: target folder created when the interactive report is knitted locally.
+- `outputs/dashboard/`: target folder created when the dashboard is knitted locally.
 - `outputs/tables/`: the rendered PDF table report.
 - `references/`: BibTeX citation used by the PDF report.
 
@@ -20,11 +20,11 @@ The project is organized in a public GitHub repository with data, code, figures,
 
 ## Exercise 2
 
-`code/week4/NHANES_week3_interactive.Rmd` converts the Week 3 report to HTML. It uses a theme and syntax highlighting, a floating table of contents, tabbed sections in Exercise 1, and a `DT` table at the start of Exercise 2. The rendered file is `outputs/week3-html/NHANES_week3_interactive.html`.
+`code/week4/NHANES_week3_interactive.Rmd` converts the Week 3 report to HTML. It uses a theme and syntax highlighting, a floating table of contents, tabbed sections in Exercise 1, and a `DT` table at the start of Exercise 2. Knitting the source generates `outputs/week3-html/NHANES_week3_interactive.html`.
 
 ## Exercise 3
 
-`code/week4/NHANES_dashboard.Rmd` creates a row-oriented dashboard. The top row displays a saved Week 3 figure. The bottom row reports the percentage of participants aged 21 years or older and the percentage with average systolic blood pressure above 120 mm Hg. The rendered dashboard is `outputs/dashboard/NHANES_dashboard.html`.
+`code/week4/NHANES_dashboard.Rmd` creates a row-oriented dashboard. The top row displays a saved Week 3 figure. The bottom row reports the percentage of participants aged 21 years or older and the percentage with average systolic blood pressure above 120 mm Hg. Knitting the source generates `outputs/dashboard/NHANES_dashboard.html`.
 
 ## Exercise 4
 
@@ -54,4 +54,4 @@ rmarkdown::render(
 )
 ```
 
-The rendered outputs are committed with their source files so the work can be reviewed without rerunning the analyses.
+The original Week 3 PDF and formatted table PDF are committed. The two HTML outputs can be reproduced from their source files using the commands above.
