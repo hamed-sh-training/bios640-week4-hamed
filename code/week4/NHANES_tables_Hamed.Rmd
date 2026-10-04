@@ -1,0 +1,211 @@
+---
+title: "NHANES Sample and Blood Pressure Summary"
+author: "Hamed"
+date: "2026-10-04"
+output:
+  pdf_document:
+    toc: true
+    keep_tex: true
+bibliography: ../../references/references.bib
+link-citations: true
+header-includes:
+  - \usepackage{fvextra}
+  - \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines=true,commandchars=\\\{\}}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  size = "\\scriptsize"
+)
+options(width = 70)
+
+local_lib <- normalizePath(
+  file.path("..", "..", ".r-lib"),
+  mustWork = FALSE
+)
+if (dir.exists(local_lib)) {
+  .libPaths(c(local_lib, .libPaths()))
+}
+if (!requireNamespace("pacman", quietly = TRUE)) {
+  install.packages("pacman")
+}
+pacman::p_load(tidyverse, knitr, kableExtra, here)
+
+nhanes <- read_csv(
+  here("data", "cleaned_NHANES.csv"),
+  show_col_types = FALSE
+) %>%
+  select(-any_of("Unnamed: 0")) %>%
+  mutate(
+    wave = recode(
+      as.character(wave_id),
+      `2015` = "2013-2014",
+      `2016` = "2015-2016",
+      `2017` = "2017-2018"
+    ),
+    wave = factor(
+      wave,
+      levels = c("2013-2014", "2015-2016", "2017-2018")
+    ),
+    readings_available = rowSums(
+      !is.na(across(starts_with("systolic_bp_")))
+    ),
+    avg_sbp = rowMeans(
+      across(starts_with("systolic_bp_")),
+      na.rm = TRUE
+    ),
+    avg_sbp = if_else(
+      readings_available == 0,
+      NA_real_,
+      avg_sbp
+    )
+  )
+```
+
+# Introduction
+
+The National Health and Nutrition Examination Survey combines interviews and
+health examinations to describe the health of the United States population
+[@nhanes]. This report summarizes the three survey waves represented in the
+cleaned course dataset. It describes the sample composition and the available
+systolic blood-pressure measurements using tables designed for precise
+comparison.
+
+# Sample size and male participants
+
+```{r wave-summary}
+wave_summary <- nhanes %>%
+  group_by(wave) %>%
+  summarise(
+    sample_size = n(),
+    male_n = sum(gender == "Male", na.rm = TRUE),
+    male_percent = round(male_n / sample_size * 100, 1),
+    .groups = "drop"
+  )
+
+largest_wave <- which.max(wave_summary$sample_size)
+
+wave_summary %>%
+  kable(
+    format = "latex",
+    booktabs = TRUE,
+    col.names = c("Wave", "Sample size", "Male, n", "Male, %"),
+    align = c("l", "r", "r", "r"),
+    caption = "Overall sample size and male participants by survey wave"
+  ) %>%
+  kable_styling(
+    latex_options = "hold_position",
+    full_width = FALSE
+  ) %>%
+  row_spec(largest_wave, bold = TRUE, background = "lightgray") %>%
+  column_spec(1, width = "2.5cm") %>%
+  footnote(
+    general = "The shaded row has the largest overall sample size.",
+    footnote_as_chunk = FALSE
+  )
+```
+
+The 2013-2014 wave contains the largest sample. Across all three waves, the
+numbers of males and females are similar, with males accounting for roughly
+half of each wave. Reporting both counts and percentages makes it possible to
+compare composition even though the wave sample sizes differ.
+
+# Ethnicity by wave
+
+```{r ethnicity-summary}
+ethnicity_summary <- nhanes %>%
+  filter(!is.na(ethnicity_2)) %>%
+  count(wave, ethnicity_2, name = "n") %>%
+  group_by(wave) %>%
+  mutate(percent = round(n / sum(n) * 100, 1)) %>%
+  ungroup()
+
+wave_rows <- ethnicity_summary %>%
+  count(wave) %>%
+  tibble::deframe()
+
+largest_ethnicity <- which.max(ethnicity_summary$percent)
+
+ethnicity_summary %>%
+  kable(
+    format = "latex",
+    booktabs = TRUE,
+    longtable = TRUE,
+    col.names = c("Wave", "Ethnicity", "n", "%"),
+    align = c("l", "l", "r", "r"),
+    caption = "Ethnicity counts and percentages within each survey wave"
+  ) %>%
+  kable_styling(
+    latex_options = c("repeat_header"),
+    full_width = FALSE
+  ) %>%
+  pack_rows(index = wave_rows) %>%
+  row_spec(largest_ethnicity, bold = TRUE, background = "lightgray") %>%
+  footnote(
+    general = "Percentages are calculated within wave. The largest displayed percentage is shaded.",
+    footnote_as_chunk = FALSE
+  )
+```
+
+White participants form the largest category in each wave. The table keeps the
+more detailed `ethnicity_2` classification because it identifies Asian
+participants separately instead of combining them with the broad Other group.
+The grouped rows help the reader compare categories within one wave before
+moving to the next.
+
+# Average systolic blood pressure
+
+```{r sbp-summary}
+sbp_summary <- nhanes %>%
+  filter(!is.na(avg_sbp)) %>%
+  group_by(wave) %>%
+  summarise(
+    n = n(),
+    minimum = round(min(avg_sbp), 1),
+    maximum = round(max(avg_sbp), 1),
+    median = round(median(avg_sbp), 1),
+    mean = round(mean(avg_sbp), 1),
+    sd = round(sd(avg_sbp), 1),
+    .groups = "drop"
+  )
+
+highest_mean <- which.max(sbp_summary$mean)
+
+sbp_summary %>%
+  kable(
+    format = "latex",
+    booktabs = TRUE,
+    col.names = c(
+      "Wave", "Available n", "Minimum", "Maximum",
+      "Median", "Mean", "SD"
+    ),
+    align = c("l", "r", "r", "r", "r", "r", "r"),
+    digits = 1,
+    caption = "Summary statistics for average systolic blood pressure by wave"
+  ) %>%
+  kable_styling(
+    latex_options = "hold_position",
+    full_width = FALSE,
+    font_size = 9
+  ) %>%
+  add_header_above(c(" " = 2, "Average systolic BP (mm Hg)" = 5)) %>%
+  row_spec(highest_mean, bold = TRUE, background = "lightgray") %>%
+  footnote(
+    general = "Average SBP is the participant-level mean of all available systolic readings. The row with the highest mean is shaded.",
+    footnote_as_chunk = FALSE
+  )
+```
+
+The number of participants with an average systolic blood-pressure value is
+smaller than the total sample because some participants have no usable
+systolic readings. The mean and median are close within each wave, while the
+minimum, maximum, and standard deviation show that individual measurements
+still vary substantially. Calculating the participant-level average first
+prevents participants with more readings from receiving more weight in the
+wave summary.
+
+# References
+

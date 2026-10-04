@@ -1,0 +1,94 @@
+---
+title: "NHANES Dashboard"
+author: "Hamed"
+date: "2026-10-04"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+local_lib <- normalizePath(
+  file.path("..", "..", ".r-lib"),
+  mustWork = FALSE
+)
+if (dir.exists(local_lib)) {
+  .libPaths(c(local_lib, .libPaths()))
+}
+if (!requireNamespace("pacman", quietly = TRUE)) {
+  install.packages("pacman")
+}
+pacman::p_load(tidyverse, flexdashboard, here)
+
+hanes <- read_csv(
+  here("data", "cleaned_NHANES.csv"),
+  show_col_types = FALSE
+) %>%
+  mutate(
+    readings_available = rowSums(
+      !is.na(across(starts_with("systolic_bp_")))
+    ),
+    avg_sbp = rowMeans(
+      across(starts_with("systolic_bp_")),
+      na.rm = TRUE
+    ),
+    avg_sbp = if_else(
+      readings_available == 0,
+      NA_real_,
+      avg_sbp
+    )
+  )
+
+adult_percent <- round(mean(hanes$age >= 21, na.rm = TRUE) * 100, 1)
+
+high_sbp_percent <- round(
+  mean(hanes$avg_sbp > 120, na.rm = TRUE) * 100,
+  1
+)
+```
+
+Row {data-height=650}
+-------------------------------------
+
+### Age distribution in the NHANES sample
+
+```{r age-figure, out.width="95%"}
+knitr::include_graphics(
+  here("figures", "A_age_distribution.png")
+)
+```
+
+Row {data-height=350}
+-------------------------------------
+
+### Participants aged 21 or older
+
+```{r adult-gauge}
+gauge(
+  adult_percent,
+  min = 0,
+  max = 100,
+  symbol = "%",
+  sectors = gaugeSectors(
+    success = c(65, 100),
+    warning = c(40, 65),
+    danger = c(0, 40)
+  )
+)
+```
+
+### Average SBP above 120 mm Hg
+
+```{r sbp-value-box}
+valueBox(
+  paste0(high_sbp_percent, "%"),
+  caption = "Participants with average systolic BP above 120 mm Hg",
+  icon = "fa-heartbeat",
+  color = "danger"
+)
+```
+
